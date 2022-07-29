@@ -15,7 +15,7 @@ Config 扩展是一个支持在PC以及安卓中使用的配置表和项目设�
 
 ### Setting使用
 
-请在[这里](SettingCore/README.md)查看Config的使用方式。
+请在[这里](SettingCore/README.md)查看Setting的使用方式。
 
 ## 编辑器扩展
 
