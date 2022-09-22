@@ -153,9 +153,8 @@ public sealed partial class PPSettingWindowScope
                 dir = projectPath;
             }
 
-            string fullPathName = EditorUtility.SaveFilePanel("Choice Config", dir, "PPConfig", "ini");
-            //string fullPathName= EditorUtility.OpenFilePanel("Choice Config", dir, "ini");
-            
+            string fullPathName = EditorUtility.SaveFilePanel("Choice Config", dir, PPExtensionModule.Config.ConfigNameDefault, PPExtensionModule.Config.ConfigfileExtention);
+
             if (!string.IsNullOrEmpty(fullPathName))
             {
                 SaveContent(fullPathName);
@@ -206,7 +205,7 @@ public sealed partial class PPSettingWindowScope
             sb.Append("using PPExtensionModule;\r\n");
             sb.Append("\r\n");
             sb.Append("\r\n");
-            sb.Append(string.Format("public class {0} : PPSettingBase\r\n", _settingName));
+            sb.Append(string.Format("public class {0} :  PPSettingBaseT<{0}>\r\n", _settingName));
             sb.Append("{\r\n");
             for (int i = 0; i < _contentDatas.Count; i++)
             {
@@ -252,6 +251,11 @@ public sealed partial class PPSettingWindowScope
         private void Init()
         {
             data = new List<ContentData>();
+            
+            if (!Directory.Exists(PPExtensionModule.Config.ConfigPath))
+            {
+                Directory.CreateDirectory(PPExtensionModule.Config.ConfigPath);
+            }
         }
 
 

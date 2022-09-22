@@ -8,18 +8,15 @@ namespace PPExtensionModule
 {
     public class PPSettingBase
     {
-
         public virtual string GetSettingName()
         {
             Type myType = GetType();
             return myType.Name;
         }
 
-        public bool SaveTo(string _inConfigFileName = "", string _inConfigFilePath = "", bool bOverrideExist = true)
+        public bool Save(string _inConfigFileName = "", string _inConfigFilePath = "", bool bOverrideExist = true)
         {
-            PPCfgSection section = Setting.BuildConfigSection(this);
-
-            return Config.SaveSection(section, _inConfigFileName, _inConfigFilePath, bOverrideExist);
+            return Setting.SaveProjectSetting(this, _inConfigFileName, _inConfigFilePath, bOverrideExist);
         }
 
         public override string ToString()
@@ -28,7 +25,19 @@ namespace PPExtensionModule
 
             return section.ToString();
         }
+
+
     }
+
+    public class TPPSettingBase<TC> : PPSettingBase where TC : TPPSettingBase<TC>
+    {
+        public static TC Load(string settingName = "", string inConfigFileName = "", string inConfigFilePath = "")
+        {
+            return Setting.GetProjectSetting<TC>(settingName, inConfigFileName, inConfigFilePath);
+
+        }
+    }
+    
 }
 
 

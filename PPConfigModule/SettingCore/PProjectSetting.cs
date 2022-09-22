@@ -1,13 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace PPExtensionModule
 {
     public static class Setting
     {
+        private static Dictionary<string, PPSettingBase> loadSettings = new Dictionary<string, PPSettingBase>();
+
+        
+        
+    
         private const BindingFlags InstanceBindFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
-        public static PPSettingBase GetProjectSetting(string _settingName, string inConfigFileName = "", string inConfigFilePath = "")
+        public static PPSettingBase GetProjectSetting(string _settingName="", string inConfigFileName = "", string inConfigFilePath = "")
         {
             return GetProjectSetting<PPSettingBase>(_settingName, inConfigFileName, inConfigFilePath);
         }
@@ -15,20 +21,42 @@ namespace PPExtensionModule
 
         public static bool SaveProjectSetting(PPSettingBase _setting, string inConfigFileName = "", string inConfigFilePath = "", bool bOverrideExist = true)
         {
-            PPCfgSection section = BuildConfigSection(_setting);
+
+            if (loadSettings.ContainsKey(_setting.GetSettingName()))
+            {
+                loadSettings[_setting.GetSettingName()] = _setting;
+            }
             
+            PPCfgSection section = BuildConfigSection(_setting);
             return Config.SaveSection(section, inConfigFileName, inConfigFilePath, bOverrideExist);
         }
         
 
-        public static T GetProjectSetting<T>(string _settingName, string inConfigFileName = "", string inConfigFilePath = "") where T : PPSettingBase
+        public static T GetProjectSetting<T>(string _settingName="", string inConfigFileName = "", string inConfigFilePath = "") where T : PPSettingBase
         {
+            if (string.IsNullOrEmpty(_settingName))
+            {
+                _settingName = typeof(T).Name;
+            }
+            
+            
+            if (loadSettings.ContainsKey(_settingName))
+            {
+                return (T)loadSettings[_settingName];
+            }
+            
+            
             PPCfgSection secData = new PPCfgSection();
             secData.sectionName = _settingName;
 
-            if (!Config.GetConfigSection(ref secData, inConfigFileName, inConfigFilePath)) return null;
+            if (!Config.GetConfigSection(ref secData, inConfigFileName, inConfigFilePath))
+            {
+                return null;
+            }
 
-            return CreateSettingInstance<T>(secData);
+            T createdSetting = CreateSettingInstance<T>(secData);
+            loadSettings.Add(_settingName,createdSetting);
+            return createdSetting;
         }
 
         public static PPCfgSection BuildConfigSection<T>(T _inSetting) where T : PPSettingBase

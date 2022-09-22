@@ -27,13 +27,15 @@ namespace PPExtensionModule
 
         private static string configPathDefault = ConfigPathRoot + configPathDirName;
 
-        private static string configfileNameDefault = "PPConfig.ini";
+        private static string configfileNameDefault = "PPConfig";
+        private static string configfileExtention = "cfg";
 
         public static string ConfigPathDirName => configPathDirName;
         public static string ConfigPath => configPathDefault;
         public static string ConfigNameDefault => configfileNameDefault;
-
-
+        
+        public static string ConfigfileExtention => configfileExtention;
+        
         public static string GetAllConfigFilesPath()
         {
             string paths = "";
@@ -109,7 +111,11 @@ namespace PPExtensionModule
 
         private static string ConvertConfigFileName(string inFileName)
         {
-            return inFileName == "" ? ConfigNameDefault : inFileName;
+            if(string.IsNullOrEmpty( inFileName))
+                return ConfigNameDefault+"."+ ConfigfileExtention;
+            
+            return (inFileName.LastIndexOf('.') == -1) ? (inFileName + "." + ConfigfileExtention) : inFileName;
+
         }
 
         private static string FileExists(string inConfigFileName, string inConfigFilePath)
@@ -324,6 +330,10 @@ namespace PPExtensionModule
             {
                 StreamWriter sw = new StreamWriter(fs, System.Text.Encoding.Default);
 
+                sw.WriteLine("@ Line Comment");
+                sw.WriteLine("##  Line Block Comment ##");
+                sw.WriteLine("");
+                
                 sw.WriteLine(cfgData.ToString());
 
                 sw.Flush();
@@ -351,7 +361,19 @@ namespace PPExtensionModule
             
             if (!File.Exists(filePath))
             {
-                File.Create(filePath);
+                //File.Create(filePath).Dispose();
+                
+                using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    StreamWriter sw = new StreamWriter(fs, System.Text.Encoding.Default);
+
+                    sw.WriteLine("@ Line Comment");
+                    sw.WriteLine("##  Line Block Comment ##");
+                    sw.WriteLine("");
+                    sw.Flush();
+                    sw.Close();
+                }
+                
             }
 
 
@@ -416,23 +438,54 @@ namespace PPExtensionModule
 
                 string strLine = null;
                 string curSectioName = "";
+                string dealLine = "";
                 do
                 {
                     strLine = sr.ReadLine();
 
                     if (strLine == "") continue;
-
                     if (strLine == null) break;
+                    if (strLine[0] == '@') continue;
 
-                    if ((strLine[0] == '[') && (strLine[strLine.Length - 1] == ']'))
+                    string[] splitlineComments = strLine.Split('@');
+                    if (splitlineComments.Length == 1)
                     {
-                        curSectioName = strLine.Substring(1, strLine.Length - 2);
-                        outItem.CreateNewSection( curSectioName );
+                        dealLine = strLine;
+                    }
+                    else
+                    {
+                        dealLine = splitlineComments[0];
+                    }
 
+                    if (dealLine.Contains("##"))
+                    {
+                        int startIndex = dealLine.IndexOf("##", StringComparison.Ordinal);
+                        int endIndex = dealLine.LastIndexOf("##", StringComparison.Ordinal);
+
+                        if (startIndex == endIndex)
+                        {
+                            dealLine =  dealLine.Replace("##", "");
+                        }
+                        else
+                        {
+                            string lStr = dealLine.Substring(0, startIndex);
+                            string rStr = dealLine.Substring(endIndex+2, dealLine.Length-endIndex-2);
+                            dealLine = lStr + rStr;
+                        }
+                        
+                    }
+
+                    dealLine = dealLine.Trim();
+                    if (dealLine == "") continue;
+                    
+                    if ((dealLine[0] == '[') && (dealLine[dealLine.Length - 1] == ']'))
+                    {
+                        curSectioName = dealLine.Substring(1, dealLine.Length - 2);
+                        outItem.CreateNewSection( curSectioName );
                     }
                     else if (outItem.ContainsSection(curSectioName))
                     {
-                        string[] KV = strLine.Split('=');
+                        string[] KV = dealLine.Split('=');
 
                         if (KV.Length != 2) continue;
 
@@ -487,16 +540,50 @@ namespace PPExtensionModule
 
                 string strLine = null;
                 bool bSearchedSection = false;
+                string dealLine = "";
 
                 do
                 {
                     strLine = sr.ReadLine();
 
                     if (strLine == "") continue;
-
                     if (strLine == null) break;
+                    if (strLine[0] == '@') continue;
 
-                    if ((strLine[0] == '[') && (strLine[strLine.Length - 1] == ']'))
+
+                    string[] splitlineComments = strLine.Split('@');
+                    if (splitlineComments.Length == 1)
+                    {
+                        dealLine = strLine;
+                    }
+                    else
+                    {
+                        dealLine = splitlineComments[0];
+                    }
+                    
+                    if (dealLine.Contains("##"))
+                    {
+                        int startIndex = dealLine.IndexOf("##", StringComparison.Ordinal);
+                        int endIndex = dealLine.LastIndexOf("##", StringComparison.Ordinal);
+
+                        if (startIndex == endIndex)
+                        {
+                            dealLine =  dealLine.Replace("##", "");
+                        }
+                        else
+                        {
+                            string lStr = dealLine.Substring(0, startIndex);
+                            string rStr = dealLine.Substring(endIndex+2, dealLine.Length-endIndex-2);
+                            dealLine = lStr + rStr;
+                        }
+                        
+                    }
+                    
+                    dealLine = dealLine.Trim();
+                    if (dealLine == "") continue;
+                    
+
+                    if ((dealLine[0] == '[') && (dealLine[dealLine.Length - 1] == ']'))
                     {
                         if (bSearchedSection)
                         {
@@ -504,7 +591,7 @@ namespace PPExtensionModule
                             return true;
                         }
 
-                        string sectionTitle = strLine.Substring(1, strLine.Length - 2);
+                        string sectionTitle = dealLine.Substring(1, dealLine.Length - 2);
 
                         if (sectionTitle == inSectionName)
                         {
@@ -514,7 +601,7 @@ namespace PPExtensionModule
                     else if (bSearchedSection)
                     {
 
-                        outContents.Add(strLine);
+                        outContents.Add(dealLine);
                     }
 
 
