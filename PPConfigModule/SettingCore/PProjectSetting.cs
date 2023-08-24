@@ -30,21 +30,26 @@ namespace PPExtensionModule
             PPCfgSection section = BuildConfigSection(_setting);
             return Config.SaveSection(section, inConfigFileName, inConfigFilePath, bOverrideExist);
         }
-        
 
-        public static T GetProjectSetting<T>(string _settingName="", string inConfigFileName = "", string inConfigFilePath = "") where T : PPSettingBase
+        public static T Load<T>(string inConfigFileName = "",
+            string inConfigFilePath = "") where T : PPSettingBase
         {
-            if (string.IsNullOrEmpty(_settingName))
-            {
-                _settingName = typeof(T).Name;
-            }
-            
-            
-            if (loadSettings.ContainsKey(_settingName))
-            {
-                return (T)loadSettings[_settingName];
-            }
-            
+               string _settingName = typeof(T).Name;
+               return LoadProjectSetting<T>(_settingName, inConfigFileName, inConfigFilePath);
+        }
+
+        public static T Get<T>(string inConfigFileName = "",
+            string inConfigFilePath = "") where T : PPSettingBase
+        {
+            string _settingName = typeof(T).Name;
+            return GetProjectSetting<T>(_settingName, inConfigFileName, inConfigFilePath);
+        }
+
+
+        public static T LoadProjectSetting<T>( string _settingName,string inConfigFileName = "",
+            string inConfigFilePath = "") where T : PPSettingBase
+        {
+
             
             PPCfgSection secData = new PPCfgSection();
             secData.sectionName = _settingName;
@@ -55,7 +60,29 @@ namespace PPExtensionModule
             }
 
             T createdSetting = CreateSettingInstance<T>(secData);
-            loadSettings.Add(_settingName,createdSetting);
+
+            if (loadSettings.ContainsKey(_settingName))
+            {
+                loadSettings[_settingName] = createdSetting;
+                
+            }
+            else
+            {
+                loadSettings.Add(_settingName,createdSetting);
+            }
+            
+            return createdSetting;
+        }
+
+        public static T GetProjectSetting<T>(string _settingName, string inConfigFileName = "", string inConfigFilePath = "") where T : PPSettingBase
+        {     
+            
+            if (loadSettings.ContainsKey(_settingName))
+            {
+                return (T)loadSettings[_settingName];
+            }
+            var createdSetting = LoadProjectSetting<T>(_settingName, inConfigFileName, inConfigFilePath);
+           
             return createdSetting;
         }
 

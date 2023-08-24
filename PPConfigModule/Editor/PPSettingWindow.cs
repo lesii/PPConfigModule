@@ -120,7 +120,6 @@ public partial class PPSettingWindowScope
 
             GUILayout.BeginHorizontal(GUILayout.Height(21f));
             {
-                //下载并导入
                 if (GUILayout.Button(EditorGUIUtility.IconContent("Toolbar Plus"), GUILayout.Width(25f)))
                 {
                     CreateNewConfig();
@@ -315,6 +314,7 @@ public partial class PPSettingWindowScope
                         if (currentSelected != null)
                         {
                             SaveSelected();
+                            //ResetData();
                         }
                     }
 
@@ -400,6 +400,10 @@ public partial class PPSettingWindowScope
 
             addNewContents.Clear();
             bDeleteElements = false;
+
+            currentSelected.loadSection = sec;
+            RevertSelected();
+
         }
 
         private void FreshClassData(PPExtensionModule.PPCfgSection sec)
@@ -425,7 +429,7 @@ public partial class PPSettingWindowScope
             StringBuilder sb = new StringBuilder();
             StringBuilder sb_Residue = new StringBuilder();
             bool findEnd = false;
-            foreach (string line in File.ReadLines(CreatePath))
+            foreach (string line in File.ReadAllLines(CreatePath))
             {
                 if (line == "//#")
                 {
@@ -495,16 +499,11 @@ public partial class PPSettingWindowScope
 
             FileStream fileStream = File.Create(CreatePath);
 
-            byte[] bytes = new UTF8Encoding(true).GetBytes(sb.ToString());
+            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
             fileStream.Write(bytes, 0, bytes.Length);
             fileStream.Close();
 
-
-            return;
-
-
-
-
+            AssetDatabase.Refresh();
         }
 
         private void GenerateClassData()
@@ -543,7 +542,16 @@ public partial class PPSettingWindowScope
             PPCreateSettingWindow.CreateNewClass(currentSelected.loadSection.sectionName, contents);
         }
 
+        private void ResetData()
+        {
+            bDeleteElements = false;
+            configs = new List<PPShowCfgData>();
+            string targetPath = Path.GetDirectoryName(Application.dataPath) +
+                                PPExtensionModule.Config.ConfigPathDirName;
 
+            window.LoadConfig(targetPath);
+        }
+        
         private void Init()
         {
             projectPath = Path.GetDirectoryName(Application.dataPath);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEditor;
+using UnityEditor.VersionControl;
 using UnityEngine;
 
 
@@ -128,7 +129,7 @@ public sealed partial class PPSettingWindowScope
                 GUILayout.Space(20f);
                 bCreateNewClass = GUILayout.Toggle(bCreateNewClass, "Create Class");
                 GUILayout.FlexibleSpace();
-                //下载并导入
+                
                 if (GUILayout.Button("Create", GUILayout.Width(70f)))
                 {
                     CreateNew();
@@ -205,7 +206,7 @@ public sealed partial class PPSettingWindowScope
             sb.Append("using PPExtensionModule;\r\n");
             sb.Append("\r\n");
             sb.Append("\r\n");
-            sb.Append(string.Format("public class {0} :  PPSettingBaseT<{0}>\r\n", _settingName));
+            sb.Append(string.Format("public class {0} :  TPPSettingBase<{0}>\r\n", _settingName));
             sb.Append("{\r\n");
             for (int i = 0; i < _contentDatas.Count; i++)
             {
@@ -220,7 +221,6 @@ public sealed partial class PPSettingWindowScope
                         break;
                     case InType.String:
                         sb.Append("string ");
-
                         break;
                     case InType.Boolean:
                         sb.Append("bool ");
@@ -237,10 +237,11 @@ public sealed partial class PPSettingWindowScope
 
             FileStream fileStream = File.Create(CreatePath);
 
-            byte[] bytes = new UTF8Encoding(true).GetBytes(sb.ToString());
+            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
             fileStream.Write(bytes, 0, bytes.Length);
             fileStream.Close();
 
+            AssetDatabase.Refresh();
         }
 
         private void AddNewElement()

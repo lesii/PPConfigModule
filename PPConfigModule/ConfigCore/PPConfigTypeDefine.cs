@@ -11,6 +11,7 @@ namespace PPExtensionModule
         public string configFullName;
         private Dictionary<string, PPCfgSection> m_kv;
 
+        
         private Dictionary<string, PPCfgSection> KV
         {
             get
@@ -22,6 +23,12 @@ namespace PPExtensionModule
 
 
         }
+        
+        public int Count
+        {
+            get { return KV.Count; }
+        }
+        
 
         public void CopyTo(ref PPCfgData _other)
         {
@@ -53,6 +60,22 @@ namespace PPExtensionModule
 
             return res;
         }
+
+        
+        public void RemoveSection(PPCfgSection _inSection)
+        {
+            if (!KV.ContainsKey(_inSection.sectionName)) return;
+            
+            KV.Remove(_inSection.sectionName);
+        }
+        
+        public void RemoveSection(string _inSectionName)
+        {
+            if (!KV.ContainsKey(_inSectionName)) return;
+            
+            KV.Remove(_inSectionName);
+        }
+        
 
 
         public void AddSection( PPCfgSection _inSection)
@@ -118,12 +141,18 @@ namespace PPExtensionModule
                 res += (item.Value.ToString() + "\r\n");
             }
 
+            if (string.IsNullOrEmpty(res)) return res;
+            
             res = res.Substring(0, res.Length - 2);
 
             return res;
         }
+        
+        
 
     }
+    
+    
 
     [Serializable]
     public struct PPCfgSection
@@ -141,7 +170,43 @@ namespace PPExtensionModule
             }
         }
 
+        public string this[string _key]
+        {
+            get
+            {
+               return KV[_key].Value;
+            }
+        }
+        
 
+        public int Count
+        {
+            get { return KV.Count; }
+        }
+
+        public string ContentString
+        {
+            get
+            {
+                string res="";
+                foreach (var contentItem in KV)
+                {
+                    string contentLine = contentItem.Value.ToString();
+                    res += (contentLine + "\r\n");
+                }
+                return res;
+                
+            }
+            
+        }
+
+        public bool Contains(string _contentName)
+        {
+            return KV.ContainsKey(_contentName);
+        }
+        
+        
+        
         public void CopyTo(ref PPCfgSection _other)
         {
             _other.sectionName = this.sectionName;
@@ -189,7 +254,7 @@ namespace PPExtensionModule
             
             KV.Remove(_inKey);
         }
-        
+
 
 
         public bool TryGetContent(string _inKey, ref PPCfgContent _outContent)
@@ -225,22 +290,23 @@ namespace PPExtensionModule
 
             return res;
         }
+        
+
 
         public override string ToString()
         {
             string res="";
-            res = string.Format("[{0}]", sectionName) + "\r\n";
-
-            foreach (var contentItem in KV)
-            {
-                string contentLine = contentItem.Value.ToString();
-                res += (contentLine + "\r\n");
-            }
+            res = string.Format("[{0}]", sectionName) + "\r\n" + ContentString;
 
             return res;
         }
 
 
+        public void Clear()
+        {
+            KV.Clear();
+        }
+        
     }
 
     [Serializable]

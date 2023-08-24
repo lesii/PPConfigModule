@@ -33,7 +33,7 @@ namespace PPExtensionModule
     {
         public static TC Load(string settingName = "", string inConfigFileName = "", string inConfigFilePath = "")
         {
-            return Setting.GetProjectSetting<TC>(settingName, inConfigFileName, inConfigFilePath);
+            return Setting.Load<TC>(inConfigFileName, inConfigFilePath);
 
         }
     }

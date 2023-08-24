@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -320,30 +321,242 @@ namespace PPExtensionModule
 
             string filePath = CombineFileName(inConfigFilePath, inConfigFileName);
 
+            //不存在就将配置表写入到文件内
             if (!File.Exists(filePath))
             {
                 File.Create(filePath).Dispose();
-            }
-
-
-            using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-            {
-                StreamWriter sw = new StreamWriter(fs, System.Text.Encoding.Default);
-
-                sw.WriteLine("@ Line Comment");
-                sw.WriteLine("##  Line Block Comment ##");
-                sw.WriteLine("");
                 
-                sw.WriteLine(cfgData.ToString());
+                using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    StreamWriter sw = new StreamWriter(fs, new System.Text.UTF8Encoding(false));
 
-                sw.Flush();
-                sw.Close();
+                    sw.WriteLine("@ Line Comment");
+                    sw.WriteLine("##  Line Block Comment ##");
+                    sw.WriteLine("");
+                
+                    sw.WriteLine(cfgData.ToString());
+
+                    sw.Flush();
+                    sw.Close();
+                }
             }
+            else
+            {
+                WriteCfgDataInFile(filePath, cfgData);
+            }
+            
+
+
+            
             
             return true;
 
         }
 
+        //存在文件就将配置信息写入到文件内 同时保留注释信息
+        private static void WriteCfgDataInFile(string filePath, PPCfgData cfgData)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringBuilder sectionSB = new StringBuilder();
+            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            {
+                StreamReader sr = new StreamReader(fs, new System.Text.UTF8Encoding(false));
+                
+                bool blockCommentLine = false;
+                string strLine = null;
+                string curSectioName = "";
+                PPCfgSection section = new PPCfgSection();
+                string lStr = "";
+                string rStr = "";
+                string dealLine = "";
+                do
+                {
+                    strLine = sr.ReadLine();
+                    if (strLine == null) break;
+
+                    if (strLine == "")
+                    {
+                        //TODO
+                        if (curSectioName != "")
+                        {
+                            //将剩下的新增添加到后面内容中
+                            //TODO
+                            if (section.Count > 0)
+                            {
+                                sectionSB.Append(section.ContentString);    //后续内容添加
+                            }
+                            cfgData.RemoveSection(section);
+                            section.Clear();
+                            WirteSectionInString(sectionSB, sb);
+                            //sb.Append(sectionSB);
+                            curSectioName = "";
+                            
+                            continue;
+                        }
+                        
+                        //continue;
+                        goto WRITE_LINE_LABEL;
+                    }
+                    
+                    if (strLine[0] == '@')
+                    {
+                        goto WRITE_LINE_LABEL;
+                    }
+
+                    string[] splitlineComments = strLine.Split('@');
+                    if (splitlineComments.Length == 1)
+                    {
+                        dealLine = strLine;
+                    }
+                    else
+                    {
+                        dealLine = splitlineComments[0];
+                    }
+
+                    if (dealLine.Contains("##"))
+                    {
+                        int startIndex = dealLine.IndexOf("##", StringComparison.Ordinal);
+                        int endIndex = dealLine.LastIndexOf("##", StringComparison.Ordinal);
+
+                        if (startIndex != endIndex)
+                        {
+                            lStr = dealLine.Substring(0, startIndex);
+                            rStr = dealLine.Substring(endIndex+2, dealLine.Length-endIndex-2);
+                            dealLine = lStr + rStr;
+                        }
+                        else if(!blockCommentLine)
+                        {
+                            dealLine = dealLine.Substring(0, startIndex);
+                            blockCommentLine = true;
+                        }
+                        else if (blockCommentLine)
+                        {
+                            dealLine = dealLine.Substring(endIndex+2, dealLine.Length-endIndex-2);
+                            blockCommentLine = false;
+                        }
+                    }
+                    
+                    dealLine = dealLine.Trim();
+                    if (dealLine == "")  goto WRITE_LINE_LABEL;
+                    
+                    
+                    //获取当前的段落信息,段落信息不修改
+                    if ((dealLine[0] == '[') && (dealLine[dealLine.Length - 1] == ']'))
+                    {
+                        if (curSectioName != "")
+                        {
+                            //将剩下的新增添加到后面内容中
+                            //TODO
+                            if (section.Count > 0)
+                            {
+                                sectionSB.Append(section.ContentString);    //后续内容添加
+                            }
+                            cfgData.RemoveSection(section);
+                            section.Clear();
+                            WirteSectionInString(sectionSB, sb);
+                            //sb.Append(sectionSB);
+                        }
+                        
+                        curSectioName = dealLine.Substring(1, dealLine.Length - 2);    //获取段落名
+                        cfgData.GetSection(curSectioName, ref section);        //获取段落内容
+                        sectionSB.AppendLine(strLine);
+                    }
+                    else if (curSectioName != "")
+                    {
+                        string[] KV = dealLine.Split('=');
+
+                        if (KV.Length != 2)
+                        {
+                            sectionSB.AppendLine(strLine);
+                            continue;
+                        }
+                        //outItem.AddContent(curSectioName,new PPCfgContent() { Key = KV[0], Value = KV[1] });
+                        
+                        
+                        if (section.Contains(KV[0]))
+                        {
+                            string combineLine = KV[0] + "=" + section[KV[0]];    //将新值合并成新句
+
+                            string replaceContent = strLine.Replace(dealLine, combineLine);
+                            sectionSB.AppendLine(replaceContent);
+                            section.RemoveContent(KV[0]);
+                        }
+                        else
+                        {
+                            string replaceContent = strLine.Replace(dealLine, "");
+                            
+                            if(replaceContent!="")
+                                sectionSB.AppendLine(replaceContent);
+                        }
+
+                    }
+
+                    continue;
+                    
+                    WRITE_LINE_LABEL:
+
+                    if (curSectioName != "")
+                    {
+                        sectionSB.AppendLine(strLine);
+                    }
+                    else
+                    {
+                        sb.AppendLine(strLine);
+                    }
+                    
+
+                } while (strLine != null);
+
+                if (curSectioName != "")
+                {
+                    cfgData.RemoveSection(curSectioName);
+                    //sb.Append(sectionSB);
+                }
+
+                if (section.Count != 0)
+                {
+                    sectionSB.Append(section.ContentString);
+                }
+                
+                //sb.Append(sectionSB);
+                WirteSectionInString(sectionSB, sb,true);
+                
+                if(cfgData.Count > 0)
+                    sb.Append(cfgData.ToString());
+                
+                sr.Close();
+                
+            }
+            
+            if (sb.Length == 0) return;
+
+            using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            {
+                StreamWriter sw = new StreamWriter(fs,new System.Text.UTF8Encoding(false));
+
+                if (sb.Length > 0)
+                {
+                    sw.Write(sb.ToString());
+                }
+                sw.Close();
+            }
+
+        }
+
+        private static void WirteSectionInString(StringBuilder _sectionSB, StringBuilder _fileSB,bool bEnd = false)
+        {
+            string content = _sectionSB.ToString();
+            //content = content.Replace("EOF", "");
+            if(!bEnd)
+                _fileSB.AppendLine(content);
+            else
+                _fileSB.Append(content);
+            _sectionSB.Clear();
+
+        }
+
+        
+        
 
         private static bool WriteSection(PPCfgSection sectionData, string inConfigFileName = "", string inConfigFilePath = "")
         {
@@ -365,7 +578,7 @@ namespace PPExtensionModule
                 
                 using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
                 {
-                    StreamWriter sw = new StreamWriter(fs, System.Text.Encoding.Default);
+                    StreamWriter sw = new StreamWriter(fs, new System.Text.UTF8Encoding(false));
 
                     sw.WriteLine("@ Line Comment");
                     sw.WriteLine("##  Line Block Comment ##");
@@ -375,17 +588,16 @@ namespace PPExtensionModule
                 }
                 
             }
-
-
             using (FileStream fs = new FileStream(filePath, FileMode.Append, FileAccess.Write))
             {
-                StreamWriter sw = new StreamWriter(fs, System.Text.Encoding.Default);
+                StreamWriter sw = new StreamWriter(fs, new System.Text.UTF8Encoding(false));
 
                 sw.WriteLine(sectionData.ToString());
                 
                 sw.Flush();
                 sw.Close();
             }
+            
             return true;
         }
 
@@ -431,11 +643,13 @@ namespace PPExtensionModule
 
             outItem.configFullName = Path.GetFileNameWithoutExtension(ConvertConfigFileName(inConfigFileName));
 
-
+            
             using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             {
-                StreamReader sr = new StreamReader(fs, System.Text.Encoding.Default);
+                StreamReader sr = new StreamReader(fs, new System.Text.UTF8Encoding(false));
 
+
+                bool blockCommentLine = false;
                 string strLine = null;
                 string curSectioName = "";
                 string dealLine = "";
@@ -462,19 +676,48 @@ namespace PPExtensionModule
                         int startIndex = dealLine.IndexOf("##", StringComparison.Ordinal);
                         int endIndex = dealLine.LastIndexOf("##", StringComparison.Ordinal);
 
-                        if (startIndex == endIndex)
-                        {
-                            dealLine =  dealLine.Replace("##", "");
-                        }
-                        else
+                        if (startIndex != endIndex)
                         {
                             string lStr = dealLine.Substring(0, startIndex);
                             string rStr = dealLine.Substring(endIndex+2, dealLine.Length-endIndex-2);
                             dealLine = lStr + rStr;
                         }
+                        else if(!blockCommentLine)
+                        {
+                            dealLine = dealLine.Substring(0, startIndex);
+                            blockCommentLine = true;
+                        }
+                        else if (blockCommentLine)
+                        {
+                            dealLine = dealLine.Substring(endIndex+2, dealLine.Length-endIndex-2);
+                            blockCommentLine = false;
+                        }
+                        
+
+                    }
+                    
+                    /*
+
+                    if (dealLine.Contains("##"))
+                    {
+                    int startIndex = dealLine.IndexOf("##", StringComparison.Ordinal);
+                    int endIndex = dealLine.LastIndexOf("##", StringComparison.Ordinal);
+
+                    if (startIndex == endIndex)
+                    {
+                        dealLine =  dealLine.Replace("##", "");
+                    }
+                    else
+                    {
+                        string lStr = dealLine.Substring(0, startIndex);
+                        string rStr = dealLine.Substring(endIndex+2, dealLine.Length-endIndex-2);
+                        dealLine = lStr + rStr;
+                    }
                         
                     }
+                    */
 
+                    
                     dealLine = dealLine.Trim();
                     if (dealLine == "") continue;
                     
@@ -536,7 +779,7 @@ namespace PPExtensionModule
 
             using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             {
-                StreamReader sr = new StreamReader(fs, System.Text.Encoding.Default);
+                StreamReader sr = new StreamReader(fs, new System.Text.UTF8Encoding(false));
 
                 string strLine = null;
                 bool bSearchedSection = false;
