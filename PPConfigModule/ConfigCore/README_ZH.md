@@ -1,8 +1,8 @@
-# Config Core v1.0
+# Config Core v1.2
 
 展示了直接使用Config进行项目配置表导入的方法。使用静态类PPExtensionModule.Config，调用静态方法。
 
-在[这里](../README.md)返回模组功能说明。
+在[这里](../../README_ZH.md)返回模组功能说明。
 
 ## 数据结构
 
@@ -246,4 +246,4 @@
 
 ## 结束
 
-[返回](../README.md)返回模组功能说明。
+[返回](../../README_ZH.md)返回模组功能说明。

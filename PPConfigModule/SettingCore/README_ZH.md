@@ -1,10 +1,10 @@
-# Setting Core v1.0
+# Setting Core v1.2
 
 Setting模块可以在项目中使用配套api将配置表文件直接转换成对应的PPSettingBase类的对象形式，使用反射生成。
 
 使用静态类PPExtensionModule.Setting，调用静态方法。
 
-在[这里](../README.md)返回模组功能说明。
+在[这里](../../README_ZH.md)返回模组功能说明。
 
 ## 数据结构介绍
 
@@ -75,7 +75,7 @@ Setting模块可以在项目中使用配套api将配置表文件直接转换成�
 
 + 构建项目设置段落(泛型)
   + 说明
-    >将项目设置构建成欸指标段落数据PPCfgSection
+    >将项目设置构建成段落数据PPCfgSection
   + 接口调用
   
     ```C#
@@ -115,4 +115,4 @@ Setting模块可以在项目中使用配套api将配置表文件直接转换成�
 
 ## 结束
 
-[返回](../README.md)返回模组功能说明。
+[返回](../../README_ZH.md)返回模组功能说明。
